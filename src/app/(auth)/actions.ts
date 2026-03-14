@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 import { getSiteUrl } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -37,7 +38,13 @@ export async function signUpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const emailRedirectTo = `${getSiteUrl()}/auth/callback`;
+  const requestHeaders = await headers();
+  const headerOrigin = requestHeaders.get("origin");
+  const headerHost = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const headerProto = requestHeaders.get("x-forwarded-proto") ?? "https";
+  const inferredSiteUrl = headerOrigin || (headerHost ? `${headerProto}://${headerHost}` : null);
+  const emailRedirectTo = `${(inferredSiteUrl ?? getSiteUrl()).replace(/\/+$/, "")}/auth/callback`;
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
