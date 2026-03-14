@@ -17,16 +17,32 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     redirect("/login");
   }
 
-  const profile = await ensureProfileForUser({
-    email: data.user.email,
-    id: data.user.id,
-    user_metadata: {
-      full_name:
-        typeof data.user.user_metadata?.full_name === "string"
-          ? data.user.user_metadata.full_name
-          : undefined,
-    },
-  });
+  let profile;
+  try {
+    profile = await ensureProfileForUser({
+      email: data.user.email,
+      id: data.user.id,
+      user_metadata: {
+        full_name:
+          typeof data.user.user_metadata?.full_name === "string"
+            ? data.user.user_metadata.full_name
+            : undefined,
+      },
+    });
+  } catch (bootstrapError) {
+    const message =
+      bootstrapError instanceof Error ? bootstrapError.message : "Profile bootstrap failed";
+
+    if (
+      message.includes("Could not find the table 'public.profiles'") ||
+      message.includes("Could not find the table 'public.organizations'") ||
+      message.includes("schema cache")
+    ) {
+      redirect("/login?error=Database+schema+not+initialized.+Apply+Supabase+migrations");
+    }
+
+    throw bootstrapError;
+  }
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-7xl px-6 py-6 sm:px-10 sm:py-8 lg:px-12">
