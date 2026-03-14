@@ -1,9 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 
-import { getSiteUrl } from "@/lib/supabase/config";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function toMessage(value: FormDataEntryValue | null) {
@@ -37,22 +36,13 @@ export async function signUpAction(formData: FormData) {
     redirect("/signup?error=Email+and+password+are+required");
   }
 
-  const supabase = await createSupabaseServerClient();
-  const requestHeaders = await headers();
-  const headerOrigin = requestHeaders.get("origin");
-  const headerHost = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const headerProto = requestHeaders.get("x-forwarded-proto") ?? "https";
-  const inferredSiteUrl = headerOrigin || (headerHost ? `${headerProto}://${headerHost}` : null);
-  const emailRedirectTo = `${(inferredSiteUrl ?? getSiteUrl()).replace(/\/+$/, "")}/auth/callback`;
-
-  const { data, error } = await supabase.auth.signUp({
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.createUser({
     email,
+    email_confirm: true,
     password,
-    options: {
-      data: {
-        full_name: fullName || undefined,
-      },
-      emailRedirectTo,
+    user_metadata: {
+      full_name: fullName || undefined,
     },
   });
 
@@ -60,11 +50,7 @@ export async function signUpAction(formData: FormData) {
     redirect(`/signup?error=${encodeURIComponent(error.message)}`);
   }
 
-  if (!data.session) {
-    redirect("/login?message=Check+your+email+to+confirm+your+account");
-  }
-
-  redirect("/dashboard");
+  redirect("/login?message=Account+created.+You+can+sign+in+now.");
 }
 
 export async function signOutAction() {
