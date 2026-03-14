@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { getSiteUrl } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function toMessage(value: FormDataEntryValue | null) {
@@ -36,6 +37,7 @@ export async function signUpAction(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
+  const emailRedirectTo = `${getSiteUrl()}/auth/callback`;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -43,6 +45,7 @@ export async function signUpAction(formData: FormData) {
       data: {
         full_name: fullName || undefined,
       },
+      emailRedirectTo,
     },
   });
 
